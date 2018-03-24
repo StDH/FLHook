@@ -18,6 +18,7 @@
 #include <math.h>
 #include <list>
 #include <map>
+#include <sstream>
 #include <algorithm>
 #include <FLHook.h>
 #include <plugin.h>
@@ -74,11 +75,13 @@ void LoadSettings()
 //Functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool UserCmd_Template(uint iClientID, const wstring &wscCmd, const wstring &wscParam, const wchar_t *usage)
+SpaceObject *GetSpaceObject(uint base)
 {
-	
+	map<uint, SpaceObject*>::iterator i = spaceObjects.find(base);
+	if (i != spaceObjects.end())
+		return i->second;
+	return 0;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Actual Code
@@ -93,63 +96,119 @@ void ClearClientInfo(uint iClientID)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Handle Hooks
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void BaseDestroyed(uint space_obj, uint client)
+{
+	returncode = DEFAULT_RETURNCODE;
+	
+	//@@TODO Handle destroying modules here. If some exist, make sure to set the returncode to SKIPPLUGINS
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Client command processing
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef bool(*_UserCmdProc)(uint, const wstring &, const wstring &, const wchar_t*);
 
-struct USERCMD
-{
-	wchar_t *wszCmd;
-	_UserCmdProc proc;
-	wchar_t *usage;
-};
-
-USERCMD UserCmds[] =
-{
-	{ L"/template", UserCmd_Template, L"Usage: /template" },
-	{ L"/template*", UserCmd_Template, L"Usage: /template" },
-};
 
 /**
 This function is called by FLHook when a user types a chat string. We look at the
 string they've typed and see if it starts with one of the above commands. If it
 does we try to process it.
 */
-bool UserCmd_Process(uint iClientID, const wstring &wscCmd)
+bool UserCmd_Process(uint iClientID, const wstring &args)
+{
+	returncode = DEFAULT_RETURNCODE;
+	if(args.find(L"somecommand"))
+	{
+		// Do command
+	}
+}
+
+// Admin Command Handling
+bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 {
 	returncode = DEFAULT_RETURNCODE;
 
-	wstring wscCmdLineLower = ToLower(wscCmd);
-
-	// If the chat string does not match the USER_CMD then we do not handle the
-	// command, so let other plugins or FLHook kick in. We require an exact match
-	for (uint i = 0; (i < sizeof(UserCmds) / sizeof(USERCMD)); i++)
+	if(args.find(L"objectdestroy") == 0)
 	{
+		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
 
-		if (wscCmdLineLower.find(UserCmds[i].wszCmd) == 0)
+		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
+		SpaceObject *obj;
+		bool foundObj = false;
+
+		// Scan through all available SpaceObjects, if one exists, nuke it from high orbit
+		for(map<uint, SpaceObject*>::iterator i = spaceObjects.begin(); i != spaceObjects.end(); ++i)
 		{
-			// Extract the parameters string from the chat string. It should
-			// be immediately after the command and a space.
-			wstring wscParam = L"";
-			if (wscCmd.length() > wcslen(UserCmds[i].wszCmd))
+			if(i->second->basename == cmd->ArgStrToEnd(1))
 			{
-				if (wscCmd[wcslen(UserCmds[i].wszCmd)] != ' ')
-					continue;
-				wscParam = wscCmd.substr(wcslen(UserCmds[i].wszCmd) + 1);
-			}
-
-			// Dispatch the command to the appropriate processing function.
-			if (UserCmds[i].proc(iClientID, wscCmd, wscParam, UserCmds[i].usage))
-			{
-				// We handled the command tell FL hook to stop processing this
-				// chat string.
-				returncode = SKIPPLUGINS_NOFUNCTIONCALL; // we handled the command, return immediatly
-				return true;
+				obj = i->second;
+				foundObj = true;
 			}
 		}
+
+		if(!foundObj)
+		{
+			cmd->Print(L"Error: SpaceObj doesn't exist");
+			return true;
+		}
+
+		obj->currentHealth = 0;
+
+		cmd->Print(L"Ded");
+		return true;
 	}
-	return false;
+	else if(args.find(L"testobj") == 0)
+	{
+		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+
+		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
+
+		uint ship;
+		pub::Player::GetShip(client, ship);
+		if(!ship)
+		{
+			PrintUserCmdText(client, L"Error: Not in space");
+			return true;
+		}
+
+		int min 100;
+		int max = 5000;
+		int randomsiegeint = min + (rand() % (int)(max - min + 1));
+
+		string randomname = "TB";
+
+		stringstream ss;
+		ss << randomsiegeint;
+		string str = ss.str();
+
+		randomname.append(str);
+
+		//Check for conflicting base name
+		if (GetSpaceObject(CreateID(SpaceObject::CreateBaseNickname(randomname).c_str())))
+		{
+			PrintUserCmdText(client, L"ERR Deployment error, please reiterate.");
+			return true;
+		}
+
+		//@@TODO Admin log this being run
+
+		// Get the current position, rotation, and system of the player
+		uint system;
+		Vector pos;
+		Matrix rot;
+		string loadout = "null_loadout";
+
+		pub::SpaceObj::GetSystem(ship, system);
+		pub::SpaceObj::GetLocation(ship, pos, rot);
+
+		// Set the default archtype to a simple outpost
+
+		SpaceObject *obj = new SpaceObject(system, pos, rot, "wplatform_pbase_01", loadout, randomname);
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -159,7 +218,7 @@ bool UserCmd_Process(uint iClientID, const wstring &wscCmd)
 EXPORT PLUGIN_INFO* Get_PluginInfo()
 {
 	PLUGIN_INFO* p_PI = new PLUGIN_INFO();
-	p_PI->sName = "Solar Controller by Conrad Weiser\Laz - Code refactored from Alley/Cannon";
+	p_PI->sName = "Solar Controller by Conrad Weiser\Laz - Some code refactored from Alley/Cannon";
 	p_PI->sShortName = "solarcntl";
 	p_PI->bMayPause = true;
 	p_PI->bMayUnload = true;
@@ -168,6 +227,7 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&LoadSettings, PLUGIN_LoadSettings, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
 
 	return p_PI;
 }

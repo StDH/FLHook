@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E7008BA7-4F75-4AF7-B25C-3A9A3287A88F}</ProjectGuid>
+    <ProjectGuid>{E497AC1C-D457-4D47-86E4-66D2D482CB70}</ProjectGuid>
     <RootNamespace>Solar Controller</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
     <ProjectName>Solar Controller</ProjectName>
@@ -54,7 +54,7 @@
     <IntDir>$(ProjectDir)$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(SolutionDir)\Plugins\PluginUtilities;$(SolutionDir)\Source\FLHookPluginSDK\headers;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <TargetName>Solar Controller</TargetName>
+    <TargetName>solarcntl</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -113,10 +113,14 @@ copy /Y $(OutDir)$(TargetName).pdb  ..\..\..\Binaries\bin-vc14\flhook_plugins\pu
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AdminCommands.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="SpaceObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
+    <ClInclude Include="Playerbase.h" />
+    <ClInclude Include="SpaceObject.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Source\FLHook.vcxproj">
