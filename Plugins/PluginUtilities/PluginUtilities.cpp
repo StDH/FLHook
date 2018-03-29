@@ -1030,6 +1030,62 @@ void TranslateZ(Vector &pos, Matrix &rot, float z)
 	pos.z += z * rot.data[2][1];
 }
 
+// Spawn a solar
+void SpawnSolar(uint& spaceID, pub::SpaceObj::SolarInfo const& solarInfo)
+{
+	// hack server.dll so it does not call create solar packet send
+	char* serverHackAddress = (char*)hModServer + 0x2A62A;
+	char serverHack[] = { '\xEB' };
+	WriteProcMem(serverHackAddress, &serverHack, 1);
+
+	pub::SpaceObj::CreateSolar(spaceID, solarInfo);
+
+	uint dunno;
+	IObjInspectImpl* inspect;
+	if (GetShipInspect(spaceID, inspect, dunno))
+	{
+		CSolar* solar = (CSolar*)inspect->cobject();
+
+		// for every player in the same system, send solar creation packet
+		struct SOLAR_STRUCT
+		{
+			byte dunno[0x100];
+		};
+
+		SOLAR_STRUCT packetSolar;
+
+		char* address1 = (char*)hModServer + 0x163F0;
+		char* address2 = (char*)hModServer + 0x27950;
+
+		// fill struct
+		__asm
+		{
+			pushad
+			lea ecx, packetSolar
+			mov eax, address1
+			call eax
+			push solar
+			lea ecx, packetSolar
+			push ecx
+			mov eax, address2
+			call eax
+			add esp, 8
+			popad
+		}
+
+		struct PlayerData *pPD = 0;
+		while (pPD = Players.traverse_active(pPD))
+		{
+			if (pPD->iSystemID == solarInfo.iSystemID)
+				GetClientInterface()->Send_FLPACKET_SERVER_CREATESOLAR(pPD->iOnlineID, (FLPACKET_CREATESOLAR&)packetSolar);
+		}
+	}
+
+	// undo the server.dll hack
+	char serverUnHack[] = { '\x74' };
+	WriteProcMem(serverHackAddress, &serverUnHack, 1);
+}
+
 // Use this function to get the ticks since system startup. The FLHook timeInMS()
 // function seems to report inaccurate time when the FLServer.exe process freezes
 // (which happens due to other bugs). Used by playercntl.

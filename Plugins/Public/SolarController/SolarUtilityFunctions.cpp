@@ -1,7 +1,5 @@
 #include "SolarUtilityFunctions.h"
 
-
-
 static wstring SolarUtility::IntToStr(uint iValue)
 {
 	wchar_t buf[1000];

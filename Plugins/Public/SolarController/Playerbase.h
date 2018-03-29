@@ -1,4 +1,5 @@
 #pragma once
+#include "Main.h"
 #include "SpaceObject.h"
 
 
@@ -52,10 +53,10 @@ class Playerbase : public SpaceObject {
 	/*
 	 * Function prototypes
 	 */
-	void Save();
-	void Load();
+	void Save() override;
+	void Load() override;
 	
-	void Spawn();
+	void Spawn() override;
 
 	// Sync the reputation of the base (including friendly/hostile tags) to the player
 	void SyncReputationForBase();

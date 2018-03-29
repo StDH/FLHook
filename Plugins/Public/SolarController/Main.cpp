@@ -23,12 +23,11 @@
 #include <FLHook.h>
 #include <plugin.h>
 #include <PluginUtilities.h>
-#include "Main.h"
+#include "SpaceObject.h"
 
 #include "../hookext_plugin/hookext_exports.h"
+#include "PlayerCommands.h"
 
-/// A return code to indicate to FLHook if we want the hook processing to continue.
-PLUGIN_RETURNCODE returncode;
 
 void LoadSettings();
 
@@ -45,6 +44,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH)
 	{
+		// Something
 	}
 	return true;
 }
@@ -82,26 +82,7 @@ SpaceObject *GetSpaceObject(uint base)
 	return nullptr;
 }
 
-void SyncReputationForClientShip(uint ship, uint client, uint affiliation)
-{
-	int player_rep;
-	pub::SpaceObj::GetRep(ship, player_rep);
 
-	uint system;
-	pub::SpaceObj::GetSystem(ship, system);
-
-	for (map<uint, SpaceObject*>::iterator obj = spaceObjects.begin(); obj != spaceObjects.end(); ++obj)
-	{
-		if (obj->second->system == system)
-		{
-			const float attitude = obj->second->GetAttitudeTowardsClient(client);
-			if (debuggingMode)
-				ConPrint(L"SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, obj->first);
-
-			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
-		}
-	}
-}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Actual Code
@@ -118,7 +99,7 @@ void ClearClientInfo(uint iClientID)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Handle Hooks
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void BaseDestroyed(uint space_obj, uint client)
+void BaseDestroyed_Hook(uint space_obj, uint client)
 {
 	returncode = DEFAULT_RETURNCODE;
 	
@@ -144,92 +125,14 @@ bool UserCmd_Process(uint iClientID, const wstring &args)
 	{
 		// Do command
 	}
+
+	return false;
 }
 
 // Admin Command Handling
 bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 {
-	returncode = DEFAULT_RETURNCODE;
-
-	if(args.find(L"objectdestroy") == 0)
-	{
-		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-
-		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
-		SpaceObject *obj;
-		bool foundObj = false;
-
-		// Scan through all available SpaceObjects, if one exists, nuke it from high orbit
-		for(map<uint, SpaceObject*>::iterator i = spaceObjects.begin(); i != spaceObjects.end(); ++i)
-		{
-			if(i->second->basename == cmd->ArgStrToEnd(1))
-			{
-				obj = i->second;
-				foundObj = true;
-			}
-		}
-
-		if(!foundObj)
-		{
-			cmd->Print(L"Error: SpaceObj doesn't exist");
-			return true;
-		}
-
-		obj->currentHealth = 0;
-
-		cmd->Print(L"Ded");
-		return true;
-	}
-	else if(args.find(L"testobj") == 0)
-	{
-		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-
-		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
-
-		uint ship;
-		pub::Player::GetShip(client, ship);
-		if(!ship)
-		{
-			PrintUserCmdText(client, L"Error: Not in space");
-			return true;
-		}
-
-		int min = 100;
-		int max = 5000;
-		int randomsiegeint = min + (rand() % (int)(max - min + 1));
-
-		string randomname = "TB";
-
-		stringstream ss;
-		ss << randomsiegeint;
-		string str = ss.str();
-
-		randomname.append(str);
-
-		//Check for conflicting base name
-		if (GetSpaceObject(CreateID(SpaceObject::CreateBaseNickname(randomname).c_str())))
-		{
-			PrintUserCmdText(client, L"ERR Deployment error, please reiterate.");
-			return true;
-		}
-
-		//@@TODO Admin log this being run
-
-		// Get the current position, rotation, and system of the player
-		uint system;
-		Vector pos;
-		Matrix rot;
-		string loadout = "null_loadout";
-
-		pub::SpaceObj::GetSystem(ship, system);
-		pub::SpaceObj::GetLocation(ship, pos, rot);
-
-		// Set the default archtype to a simple outpost
-
-		SpaceObject *obj = new SpaceObject(system, pos, rot, "wplatform_pbase_01", loadout, randomname);
-	}
-
-	return false;
+	return HandleAdminCommands(cmd, args);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -249,6 +152,7 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
 
 	return p_PI;
 }

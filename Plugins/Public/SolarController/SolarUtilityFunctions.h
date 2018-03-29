@@ -1,5 +1,8 @@
 #pragma once
 #include "Main.h"
+#include "SpaceObject.h"
+
+class SpaceObject;
 
 namespace SolarUtility {
 

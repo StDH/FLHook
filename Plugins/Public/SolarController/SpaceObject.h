@@ -69,6 +69,9 @@ public:
 	// The path to the base ini file
 	string path;
 
+	// The physical ingame space object
+	uint spaceobj;
+
 	/* ///////////////////////////////////////////
 	* Function Prototypes
 	*////////////////////////////////////////////
@@ -78,7 +81,7 @@ public:
 
 	// Constructor which takes in a filepath for a saved object
 	SpaceObject(const string &path);
-	~SpaceObject();
+	virtual ~SpaceObject();
 
 	
 	// Spawn the object with the given internal settings
@@ -97,7 +100,7 @@ public:
 	static string CreateBaseNickname(const string &basename);
 
 	// Function which gets run every time damage has occured for the base
-	float SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage);
+	virtual float SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage);
 
 	// A setter for the default object settings
 	virtual void SetupDefaults();
@@ -105,5 +108,10 @@ public:
 	// Function which checks the reputation of a ship against the SpaceObject's affiliation.
 	virtual float GetAttitudeTowardsClient(uint client);
 
+	// Function which sets the AI personality for the spaceobj
+	static pub::AI::SetPersonalityParams MakePersonality();
 
+	// Applies a change of reputation between all bases in a clients system, to the clients ship
+	static void SyncReputationForClientShip(uint ship, uint client, uint affiliation);
+	
 };

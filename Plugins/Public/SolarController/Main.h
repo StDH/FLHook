@@ -12,14 +12,13 @@
 #include <FLHook.h>
 #include <plugin.h>
 #include <PluginUtilities.h>
-#include "SpaceObject.h"
-#include "SolarUtilityFunctions.h"
-#include "SpaceObject.h"
 
 using namespace std;
 
 // Are we in debugging mode for the plugin?
-bool debuggingMode;
+static bool debuggingMode;
+
+static PLUGIN_RETURNCODE returncode;
 
 class SpaceObject;
 
@@ -58,5 +57,3 @@ namespace AdminCommands
 //Functions
 ////////////////////////////////////////////
 
-// Function which makes sure the reputation for the object is synced to every player entering the system
-void SyncReputationForClientShip(uint ship, uint client, uint affiliation);
