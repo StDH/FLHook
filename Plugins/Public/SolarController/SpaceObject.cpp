@@ -1,7 +1,7 @@
 #include "SpaceObject.h"
 
 SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, const string& archetype, const string&
-                         loadout, const string& nickname)
+                         loadout, const string& nickname, const int maxHealth)
 {
 	// Apply the so_ tag since this is a generic space object
 	this->nickname = string("so_").append(nickname);
@@ -10,8 +10,14 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 	this->position = pos;
 	this->rotation = rot;
 	this->archetype = archetype;
+	this->maximumHealth = maximumHealth;
+	this->currentHealth = maximumHealth;
 	
 	SpaceObject::SetupDefaults();
+
+	this->saveTimer = rand() % 60;
+
+	spaceObjects[this->base] = this;
 }
 
 SpaceObject::SpaceObject(const string& path)
@@ -27,6 +33,8 @@ SpaceObject::~SpaceObject()
 
 void SpaceObject::Spawn()
 {
+
+	//@@TODO: Fix this method. Currently it's not working as intended.
 
 	if(!spaceobj)
 	{
@@ -168,7 +176,7 @@ void SpaceObject::Save()
 	}
 }
 
-string SpaceObject::CreateBaseNickname(const string& basename)
+string SpaceObject::CreateObjectNickname(const string& basename)
 {
 	return "";
 }
@@ -223,6 +231,8 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 		}
 	}
 }
+
+
 
 pub::AI::SetPersonalityParams SpaceObject::MakePersonality()
 {
@@ -404,6 +414,14 @@ pub::AI::SetPersonalityParams SpaceObject::MakePersonality()
 	p.personality.Job.attack_order[1].type = 12;
 
 	return p;
+}
+
+SpaceObject* SpaceObject::GetSpaceobject(uint obj)
+{
+	map<uint, SpaceObject*>::iterator it = spaceObjects.find(obj);
+	if (it != spaceObjects.end())
+		return it->second;
+	return nullptr;
 }
 
 ////////////////////////////

@@ -13,4 +13,5 @@ bool HandleAdminCommands(CCmds* cmd, const wstring &args);
 namespace AdminCommands
 {
 	void AdminHelp(uint client);
+	bool TestSpaceObj(uint client);
 }

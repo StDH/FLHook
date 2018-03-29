@@ -120,13 +120,7 @@ does we try to process it.
 */
 bool UserCmd_Process(uint iClientID, const wstring &args)
 {
-	returncode = DEFAULT_RETURNCODE;
-	if(args.find(L"somecommand"))
-	{
-		// Do command
-	}
-
-	return false;
+	return HandlePlayerCommands(iClientID, args);
 }
 
 // Admin Command Handling
