@@ -14,6 +14,12 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 	SpaceObject::SetupDefaults();
 }
 
+SpaceObject::SpaceObject(const string& path)
+{
+	// Load the file using the path
+	
+}
+
 
 
 void SpaceObject::SetupDefaults()
@@ -51,6 +57,35 @@ void SpaceObject::SetupDefaults()
 		{
 			affiliation = 0;
 		}
+	}
+}
+
+
+void SpaceObject::Save()
+{
+	FILE *file = fopen(path.c_str(), "w");
+	if(file)
+	{
+		fprintf(file, "[SolarObj]\n");
+		fprintf(file, "nickname = %s\n", nickname.c_str());
+		fprintf(file, "objsolar = %s\n", archetype.c_str());
+		fprintf(file, "objloadout = %s\n", loadout.c_str());
+		fprintf(file, "affiliation = %u\n", affiliation);
+		fprintf(file, "system = %i\n", system);
+		
+		fprintf(file, "pos = %0.0f, %0.0f, %0.0f\n", position.x, position.y, position.z);
+
+		const Vector vRot = MatrixToEuler(rotation);
+		fprintf(file, "rot = %0.0f, %0.0f, %0.0f\n", vRot.x, vRot.y, vRot.z);
+
+		ini_write_wstring(file, "infoname", basename);
+		for (auto i = 1; i <= MAX_PARAGRAPHS; i++)
+		{
+			ini_write_wstring(file, "infocardpara", infocard_para[i]);
+		}
+
+		fprintf(file, "maxhealth = %0.0f\n", maximumHealth);
+		fprintf(file, "currenthealth = %0.0f\n", currentHealth);
 	}
 }
 

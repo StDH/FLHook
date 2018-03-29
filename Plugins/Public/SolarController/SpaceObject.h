@@ -7,8 +7,6 @@ class SpaceObject {
 
 public:
 
-
-
 	/* ///////////////////////////////////////////
 	 * Enums relevent to the generic SpaceObject
 	 *////////////////////////////////////////////
@@ -16,7 +14,7 @@ public:
 	{
 		SOLAR,
 		JUMP,
-		STATIC
+		BASE
 	};
 
 	/* ///////////////////////////////////////////
@@ -35,8 +33,8 @@ public:
 	// When the object is spawned, this is the IDS of the object name
 	uint solar_ids;
 
-	// The enum representation of what kind of object this represents
-	SpaceObjectType objectType;
+	// The enum representation of what kind of object this represents. Defaults to solar.
+	SpaceObjectType objectType = SpaceObjectType::SOLAR;
 
 	// The internal name for the model archetype used by this object
 	string archetype;
@@ -48,7 +46,7 @@ public:
 	float maximumHealth;
 
 	// The internal uint representation of what system this object exists in.
-	uint currentSystem;
+	uint system;
 
 	// The position in space which the object is in
 	Vector position;
@@ -82,16 +80,17 @@ public:
 	SpaceObject(const string &path);
 	~SpaceObject();
 
+	
 	// Spawn the object with the given internal settings
 	virtual void Spawn();
 
 	// Some timer function
 	bool Timer(uint curr_time);
 
-	// Load the playerbase INI file
+	// Load the object from its INI file
 	virtual void Load();
 
-	// Save the playerbase to it's INI file
+	// Save the object to its INI file
 	virtual void Save();
 
 	// Create the internal nickname hash for the base, given the english nickname
@@ -103,6 +102,8 @@ public:
 	// A setter for the default object settings
 	virtual void SetupDefaults();
 
+	// Function which checks the reputation of a ship against the SpaceObject's affiliation.
+	virtual float GetAttitudeTowardsClient(uint client);
 
 
 };

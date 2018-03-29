@@ -27,8 +27,6 @@
 
 #include "../hookext_plugin/hookext_exports.h"
 
-static int set_iPluginDebug = 0;
-
 /// A return code to indicate to FLHook if we want the hook processing to continue.
 PLUGIN_RETURNCODE returncode;
 
@@ -36,7 +34,7 @@ void LoadSettings();
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	srand((uint)time(0));
+	srand((uint)time(nullptr));
 	// If we're being loaded from the command line while FLHook is running then
 	// set_scCfgFile will not be empty so load the settings as FLHook only
 	// calls load settings on FLHook startup and .rehash.
@@ -60,27 +58,49 @@ EXPORT PLUGIN_RETURNCODE Get_PluginReturnCode()
 
 bool bPluginEnabled = true;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Loading Settings
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void LoadSettings()
 {
 
-	// Load settings and INI files here
+	// Verify that all of the directories required for saving bases exist. If not, create them
+	char datapath[MAX_PATH];
+	GetUserDataPath(datapath);
+	string spaceobjdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\objects\)";
+	string pobdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\playerbase\)";
+
+	CreateDirectoryA(spaceobjdir.c_str(), nullptr);
+	CreateDirectoryA(pobdir.c_str(), nullptr);
 
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Functions
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 SpaceObject *GetSpaceObject(uint base)
 {
 	map<uint, SpaceObject*>::iterator i = spaceObjects.find(base);
 	if (i != spaceObjects.end())
 		return i->second;
-	return 0;
+	return nullptr;
+}
+
+void SyncReputationForClientShip(uint ship, uint client, uint affiliation)
+{
+	int player_rep;
+	pub::SpaceObj::GetRep(ship, player_rep);
+
+	uint system;
+	pub::SpaceObj::GetSystem(ship, system);
+
+	for (map<uint, SpaceObject*>::iterator obj = spaceObjects.begin(); obj != spaceObjects.end(); ++obj)
+	{
+		if (obj->second->system == system)
+		{
+			const float attitude = obj->second->GetAttitudeTowardsClient(client);
+			if (debuggingMode)
+				ConPrint(L"SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, obj->first);
+
+			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -174,7 +194,7 @@ bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 			return true;
 		}
 
-		int min 100;
+		int min = 100;
 		int max = 5000;
 		int randomsiegeint = min + (rand() % (int)(max - min + 1));
 
@@ -209,6 +229,7 @@ bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 		SpaceObject *obj = new SpaceObject(system, pos, rot, "wplatform_pbase_01", loadout, randomname);
 	}
 
+	return false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +239,7 @@ bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 EXPORT PLUGIN_INFO* Get_PluginInfo()
 {
 	PLUGIN_INFO* p_PI = new PLUGIN_INFO();
-	p_PI->sName = "Solar Controller by Conrad Weiser\Laz - Some code refactored from Alley/Cannon";
+	p_PI->sName = "Solar Controller by Remnant - Some code refactored from Alley/Cannon";
 	p_PI->sShortName = "solarcntl";
 	p_PI->bMayPause = true;
 	p_PI->bMayUnload = true;

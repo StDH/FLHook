@@ -61,9 +61,6 @@ class Playerbase : public SpaceObject {
 	void SyncReputationForBase();
 	void SyncReputationForBaseObject(uint space_obj);
 	
-	// Gets a float representation of the reputation the base has compared to a clients reputation
-	float GetAttitudeTowardsClient(uint client);
-
 
 };
 

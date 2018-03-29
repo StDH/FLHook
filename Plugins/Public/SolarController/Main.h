@@ -1,5 +1,5 @@
-#ifndef __MAIN_H__
-#define __MAIN_H__ 1
+#pragma once
+
 
 #include <windows.h>
 #include <stdio.h>
@@ -13,13 +13,20 @@
 #include <plugin.h>
 #include <PluginUtilities.h>
 #include "SpaceObject.h"
+#include "SolarUtilityFunctions.h"
+#include "SpaceObject.h"
 
 using namespace std;
+
+// Are we in debugging mode for the plugin?
+bool debuggingMode;
+
+class SpaceObject;
 
 ////////////////////////////////////////////
 //A list of each existing type of object
 ////////////////////////////////////////////
-map<uint, SpaceObject*> spaceObjects;
+static map<uint, SpaceObject*> spaceObjects;
 
 ////////////////////////////////////////////
 //BROAD NAMESPACE DECLARATIONS FOR OBJECTS
@@ -47,7 +54,9 @@ namespace AdminCommands
 	void AdminHelp(uint client, const wstring &args);
 }
 
-// Are we in debugging mode for the plugin?
-extern bool debuggingMode;
+////////////////////////////////////////////
+//Functions
+////////////////////////////////////////////
 
-#endif
+// Function which makes sure the reputation for the object is synced to every player entering the system
+void SyncReputationForClientShip(uint ship, uint client, uint affiliation);
