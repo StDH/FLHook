@@ -36,7 +36,7 @@ bool HandleAdminCommands(CCmds* cmd, const wstring &args)
 	}
 	else if(args.find(L"testobj") == 0)
 	{
-		AdminCommands::TestSpaceObj(client);
+		return AdminCommands::TestSpaceObj(client);
 	}
 
 	return false;
@@ -105,7 +105,6 @@ bool AdminCommands::TestSpaceObj(uint client)
 	Rotate180(shipRot);
 	TranslateX(shipPos, shipRot, 1000);
 	
-
 	pub::SpaceObj::GetLocation(clientShip, shipPos, shipRot);
 	pub::SpaceObj::GetSystem(clientShip, shipSystem);
 

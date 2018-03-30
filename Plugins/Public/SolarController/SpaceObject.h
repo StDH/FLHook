@@ -40,8 +40,8 @@ public:
 	// The internal name for the loadout used by this object
 	string loadout;
 
-	float currentHealth{};
-	float maximumHealth{};
+	float currentHealth = 100000;
+	float maximumHealth = 100000;
 
 	// The internal uint representation of what system this object exists in.
 	uint system{};
@@ -82,8 +82,8 @@ public:
 
 	// Constructor which takes in a filepath for a saved object
 	SpaceObject(const string &path);
-	virtual ~SpaceObject();
 
+	virtual ~SpaceObject() = default;
 	
 	// Spawn the object with the given internal settings
 	virtual void Spawn();
@@ -103,6 +103,9 @@ public:
 	// Function which gets run every time damage has occured for the base
 	virtual float SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage);
 
+	// Function run when the spaceobj has been destroyed
+	virtual float SpaceObjDestroyed();
+
 	// A setter for the default object settings
 	virtual void SetupDefaults();
 
@@ -117,5 +120,15 @@ public:
 
 	// A function returning a pointer to the current object
 	static SpaceObject *GetSpaceobject(uint obj);
-	
+
+	// Method deleting the object
+	virtual void DeleteObject();
+
+	////////////////////////////
+	//FLHook Delegations
+	////////////////////////////
+	//TODO: Test if this needs to be handled by __stdcall or not
+	virtual void HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage, enum DamageEntry::SubObjFate fate);
+
+	virtual void ObjectDestroyed(uint space_obj, uint client);
 };

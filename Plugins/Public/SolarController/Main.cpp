@@ -65,11 +65,15 @@ void LoadSettings()
 	// Verify that all of the directories required for saving bases exist. If not, create them
 	char datapath[MAX_PATH];
 	GetUserDataPath(datapath);
+	string spawneddir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\)";
 	string spaceobjdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\objects\)";
 	string pobdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\playerbase\)";
 
+	CreateDirectoryA(spawneddir.c_str(), nullptr);
 	CreateDirectoryA(spaceobjdir.c_str(), nullptr);
 	CreateDirectoryA(pobdir.c_str(), nullptr);
+
+	ConPrint(L"Directories created\n");
 
 }
 
@@ -103,7 +107,26 @@ void BaseDestroyed_Hook(uint space_obj, uint client)
 {
 	returncode = DEFAULT_RETURNCODE;
 	
-	//@@TODO Handle destroying modules here. If some exist, make sure to set the returncode to SKIPPLUGINS
+	//Check that this is one of our bases
+	if(spaceObjects.find(space_obj) != spaceObjects.end())
+	{
+		returncode = SKIPPLUGINS;
+		
+	}
+	
+}
+
+// Handle damage being dealt to a spawned object
+void __stdcall HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage, enum DamageEntry::SubObjFate fate)
+{
+	returncode = DEFAULT_RETURNCODE;
+	
+	//Delegate the function to it's correct object type
+	for(const auto& obj : spaceObjects)
+	{
+		obj.second->HkCb_AddDmgEntry(dmg, p1, damage, fate);
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -146,7 +169,9 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
+	
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkCb_AddDmgEntry, PLUGIN_HkCb_AddDmgEntry, 0));
 
 	return p_PI;
 }

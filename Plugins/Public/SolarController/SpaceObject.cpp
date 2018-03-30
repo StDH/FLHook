@@ -1,12 +1,15 @@
 #include "SpaceObject.h"
+#include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, const string& archetype, const string&
-                         loadout, const string& nickname, const int maxHealth)
+                         loadout, const string& nicknameReadable, const int maxHealth)
 {
 	// Apply the so_ tag since this is a generic space object
-	this->nickname = string("so_").append(nickname);
+	this->nickname = CreateObjectNickname(nicknameReadable);
 	this->base = CreateID(this->nickname.c_str());
 	this->loadout = loadout;
+	this->system = system;
 	this->position = pos;
 	this->rotation = rot;
 	this->archetype = archetype;
@@ -26,11 +29,6 @@ SpaceObject::SpaceObject(const string& path)
 	
 }
 
-SpaceObject::~SpaceObject()
-{
-	// Do something
-}
-
 void SpaceObject::Spawn()
 {
 
@@ -45,9 +43,9 @@ void SpaceObject::Spawn()
 		char archname[100];
 
 		// Prepare the settings for the space object
-		_snprintf(archname, sizeof(archname), this->archetype.c_str());
-		si.iLoadoutID = CreateID(this->loadout.c_str());
-
+		_snprintf(archname, sizeof(archname), archetype.c_str());
+		si.iArchID = CreateID(archname);
+		si.iLoadoutID = CreateID(loadout.c_str());
 		si.iHitPointsLeft = 1;
 		si.iSystemID = system;
 		si.mOrientation = rotation;
@@ -58,6 +56,7 @@ void SpaceObject::Spawn()
 		si.Costume.righthand = 0;
 		si.Costume.accessories = 0;
 		si.iVoiceID = CreateID("atc_leg_m01");
+		si.iRep = affiliation;
 		strncpy_s(si.cNickName, sizeof(si.cNickName), this->nickname.c_str(), this->nickname.size());
 
 		// Check to see if the hook IDS limit has been reached
@@ -79,15 +78,15 @@ void SpaceObject::Spawn()
 		}
 
 		// Set the base name
-		FmtStr infoname(solar_ids, 0);
+		FmtStr infoname(solar_ids, nullptr);
 		infoname.begin_mad_lib(solar_ids); // scanner name
 		infoname.end_mad_lib();
 
-		FmtStr infocard(solar_ids, 0);
+		FmtStr infocard(solar_ids, nullptr);
 		infocard.begin_mad_lib(solar_ids); // infocard
 		infocard.end_mad_lib();
 		pub::Reputation::Alloc(si.iRep, infoname, infocard);
-
+		
 		// Spawn the solar object
 		SpawnSolar(spaceobj, si);
 
@@ -100,7 +99,31 @@ void SpaceObject::Spawn()
 		pub::AI::SubmitState(spaceobj, &pers);
 
 	}
+}
 
+// This is only a spaceobject, we don't need to do fancy playerbase functions here
+void SpaceObject::DeleteObject()
+{
+	char datapath[MAX_PATH];
+	GetUserDataPath(datapath);
+
+	string objarchivedir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\objects\archive\)";
+	CreateDirectoryA(objarchivedir.c_str(), nullptr);
+
+	const string timestamp = boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time());
+
+	char namehash[16];
+	sprintf(namehash, "%08x", this->base);
+		
+	string fullpath = objarchivedir + "obj_" + namehash + "." + timestamp + ".ini";
+	if(!MoveFile(this->path.c_str(), fullpath.c_str()))
+	{
+		AddLog("ERROR: Base destruction MoveFile FAILED! Error code: %s",
+			boost::lexical_cast<std::string>(GetLastError()).c_str());
+	}
+
+	spaceObjects.erase(this->base);
+	delete this;
 }
 
 
@@ -114,8 +137,9 @@ void SpaceObject::SetupDefaults()
 		GetUserDataPath(datapath);
 
 		char tpath[1024];
-		sprintf(tpath, R"(%s\Accts\MultiPlayer\spawned_solars\objects\base_%08x.ini)", datapath, base);
+		sprintf(tpath, R"(%s\Accts\MultiPlayer\spawned_solars\objects\object_%08x.ini)", datapath, base);
 		path = tpath;
+
 	}
 
 	// Build the infocard text
@@ -174,11 +198,12 @@ void SpaceObject::Save()
 		fprintf(file, "maxhealth = %0.0f\n", maximumHealth);
 		fprintf(file, "currenthealth = %0.0f\n", currentHealth);
 	}
+	fclose(file);
 }
 
-string SpaceObject::CreateObjectNickname(const string& basename)
+string SpaceObject::CreateObjectNickname(const string& objname)
 {
-	return "";
+	return string("so_") + objname;
 }
 
 float SpaceObject::SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage)
@@ -192,6 +217,11 @@ float SpaceObject::SpaceObjDamaged(uint space_obj, uint attacking_space_obj, flo
 
 	// Given that this function is for simple SpaceObjects, and is only used for rep purposes, we do not do any damage value manipulations.
 	return damage;
+}
+
+float SpaceObject::SpaceObjDestroyed()
+{
+	return 0.0f;
 }
 
 float SpaceObject::GetAttitudeTowardsClient(uint client)
@@ -418,18 +448,91 @@ pub::AI::SetPersonalityParams SpaceObject::MakePersonality()
 
 SpaceObject* SpaceObject::GetSpaceobject(uint obj)
 {
-	map<uint, SpaceObject*>::iterator it = spaceObjects.find(obj);
+	const auto it = spaceObjects.find(obj);
 	if (it != spaceObjects.end())
 		return it->second;
 	return nullptr;
 }
 
+
+
 ////////////////////////////
 // HOOK HANDLING
 ////////////////////////////
 
-// Handle the base being destroied
-void BaseDestroyed(uint space_obj, uint client)
+void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float damage, DamageEntry::SubObjFate fate)
 {
-	
+
+	// Handle if the invulernable flag is toggled
+	if(this->invulnerable)
+	{
+		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+		iDmgToSpaceID = 0;
+		return;
+	}
+
+	if (iDmgToSpaceID && dmg->get_inflictor_id())
+	{
+		float curr, max;
+		pub::SpaceObj::GetHealth(iDmgToSpaceID, curr, max);
+
+		// Debugging stuff
+		if(debuggingMode)
+		{
+			ConPrint(L"HkCb_AddDmgEntry iDmgToSpaceID=%u get_inflictor_id=%u curr=%0.2f max=%0.0f damage=%0.2f cause=%u is_player=%u player_id=%u fate=%u\n",
+				iDmgToSpaceID, dmg->get_inflictor_id(), curr, max, damage, dmg->get_cause(), dmg->is_inflictor_a_player(), dmg->get_inflictor_owner_player(), fate);
+		}
+
+		// A work around for an apparent bug where mines/missiles at the base
+		// causes the base damage to jump down to 0 even if the base is
+		// otherwise healthy.
+		if (damage == 0.0f && curr> 200000)
+		{
+			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+			if (debuggingMode)
+				ConPrint(L"HkCb_AddDmgEntry[1] - invalid damage?\n");
+			return;
+		}
+
+		// If this is an NPC hit then suppress the call completely
+		if (!dmg->is_inflictor_a_player())
+		{
+			if (debuggingMode)
+				ConPrint(L"HkCb_AddDmgEntry[2] suppressed - npc\n");
+			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+			iDmgToSpaceID = 0;
+			return;
+		}
+
+		// This call is for us, skip all plugins.		
+		const float newDamage = SpaceObjDamaged(iDmgToSpaceID, dmg->get_inflictor_id(), curr, damage);
+		returncode = SKIPPLUGINS;
+
+		if (newDamage != 0.0f)
+		{
+			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+			if (debuggingMode)
+				ConPrint(L"HkCb_AddDmgEntry[3] suppressed - shield up - new_damage=%0.0f\n", newDamage);
+			dmg->add_damage_entry(p1, newDamage, fate);
+			iDmgToSpaceID = 0;
+			return;
+		}
+	}
+}
+
+// Handle the base being destroyed
+void SpaceObject::ObjectDestroyed(uint space_obj, uint client)
+{
+	if (debuggingMode)
+		ConPrint(L"SpaceObject::destroyed space_obj=%u\n", space_obj);
+
+	pub::SpaceObj::LightFuse(space_obj, "player_base_explode_fuse", 0);
+	spaceObjects.erase(space_obj);
+
+	this->spaceobj = 0;
+
+	//TODO: Decide if we need to send audio, and alert players that the object has been destroyed
+
+	SpaceObject::DeleteObject();
+
 }
