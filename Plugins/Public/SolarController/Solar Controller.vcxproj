@@ -53,7 +53,7 @@
     <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(SolutionDir)\Plugins\PluginUtilities;$(SolutionDir)\Source\FLHookPluginSDK\headers;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(SolutionDir)\Plugins\PluginUtilities;$(SolutionDir)\Source\FLHookPluginSDK\headers;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)\Dependencies\boost</IncludePath>
     <TargetName>solarcntl</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -113,13 +113,17 @@ copy /Y $(OutDir)$(TargetName).pdb  ..\..\..\Binaries\bin-vc14\flhook_plugins\pu
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AdminCommands.cpp" />
+    <ClCompile Include="PlayerCommands.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Playerbase.cpp" />
+    <ClCompile Include="SolarUtilityFunctions.cpp" />
     <ClCompile Include="SpaceObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
     <ClInclude Include="Playerbase.h" />
+    <ClInclude Include="PlayerCommands.h" />
+    <ClInclude Include="SolarUtilityFunctions.h" />
     <ClInclude Include="SpaceObject.h" />
   </ItemGroup>
   <ItemGroup>

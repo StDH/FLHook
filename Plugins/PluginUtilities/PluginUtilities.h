@@ -69,6 +69,8 @@ void TranslateX(Vector &pos, Matrix &rot, float x);
 void TranslateY(Vector &pos, Matrix &rot, float y);
 void TranslateZ(Vector &pos, Matrix &rot, float z);
 
+void SpawnSolar(uint& spaceID, pub::SpaceObj::SolarInfo const &solarInfo);
+
 mstime GetTimeInMS();
 float degrees(float rad);
 

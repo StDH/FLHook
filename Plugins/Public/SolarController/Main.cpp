@@ -23,20 +23,17 @@
 #include <FLHook.h>
 #include <plugin.h>
 #include <PluginUtilities.h>
-#include "Main.h"
+#include "SpaceObject.h"
 
 #include "../hookext_plugin/hookext_exports.h"
+#include "PlayerCommands.h"
 
-static int set_iPluginDebug = 0;
-
-/// A return code to indicate to FLHook if we want the hook processing to continue.
-PLUGIN_RETURNCODE returncode;
 
 void LoadSettings();
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	srand((uint)time(0));
+	srand((uint)time(nullptr));
 	// If we're being loaded from the command line while FLHook is running then
 	// set_scCfgFile will not be empty so load the settings as FLHook only
 	// calls load settings on FLHook startup and .rehash.
@@ -47,6 +44,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH)
 	{
+		// Something
 	}
 	return true;
 }
@@ -60,28 +58,35 @@ EXPORT PLUGIN_RETURNCODE Get_PluginReturnCode()
 
 bool bPluginEnabled = true;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Loading Settings
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void LoadSettings()
 {
 
-	// Load settings and INI files here
+	// Verify that all of the directories required for saving bases exist. If not, create them
+	char datapath[MAX_PATH];
+	GetUserDataPath(datapath);
+	string spawneddir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\)";
+	string spaceobjdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\objects\)";
+	string pobdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\playerbase\)";
+
+	CreateDirectoryA(spawneddir.c_str(), nullptr);
+	CreateDirectoryA(spaceobjdir.c_str(), nullptr);
+	CreateDirectoryA(pobdir.c_str(), nullptr);
+
+	ConPrint(L"Directories created\n");
 
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Functions
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 SpaceObject *GetSpaceObject(uint base)
 {
 	map<uint, SpaceObject*>::iterator i = spaceObjects.find(base);
 	if (i != spaceObjects.end())
 		return i->second;
-	return 0;
+	return nullptr;
 }
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Actual Code
@@ -98,11 +103,30 @@ void ClearClientInfo(uint iClientID)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Handle Hooks
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void BaseDestroyed(uint space_obj, uint client)
+void BaseDestroyed_Hook(uint space_obj, uint client)
 {
 	returncode = DEFAULT_RETURNCODE;
 	
-	//@@TODO Handle destroying modules here. If some exist, make sure to set the returncode to SKIPPLUGINS
+	//Check that this is one of our bases
+	if(spaceObjects.find(space_obj) != spaceObjects.end())
+	{
+		returncode = SKIPPLUGINS;
+		
+	}
+	
+}
+
+// Handle damage being dealt to a spawned object
+void __stdcall HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage, enum DamageEntry::SubObjFate fate)
+{
+	returncode = DEFAULT_RETURNCODE;
+	
+	//Delegate the function to it's correct object type
+	for(const auto& obj : spaceObjects)
+	{
+		obj.second->HkCb_AddDmgEntry(dmg, p1, damage, fate);
+	}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,96 +143,13 @@ does we try to process it.
 */
 bool UserCmd_Process(uint iClientID, const wstring &args)
 {
-	returncode = DEFAULT_RETURNCODE;
-	if(args.find(L"somecommand"))
-	{
-		// Do command
-	}
+	return HandlePlayerCommands(iClientID, args);
 }
 
 // Admin Command Handling
 bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 {
-	returncode = DEFAULT_RETURNCODE;
-
-	if(args.find(L"objectdestroy") == 0)
-	{
-		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-
-		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
-		SpaceObject *obj;
-		bool foundObj = false;
-
-		// Scan through all available SpaceObjects, if one exists, nuke it from high orbit
-		for(map<uint, SpaceObject*>::iterator i = spaceObjects.begin(); i != spaceObjects.end(); ++i)
-		{
-			if(i->second->basename == cmd->ArgStrToEnd(1))
-			{
-				obj = i->second;
-				foundObj = true;
-			}
-		}
-
-		if(!foundObj)
-		{
-			cmd->Print(L"Error: SpaceObj doesn't exist");
-			return true;
-		}
-
-		obj->currentHealth = 0;
-
-		cmd->Print(L"Ded");
-		return true;
-	}
-	else if(args.find(L"testobj") == 0)
-	{
-		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-
-		uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
-
-		uint ship;
-		pub::Player::GetShip(client, ship);
-		if(!ship)
-		{
-			PrintUserCmdText(client, L"Error: Not in space");
-			return true;
-		}
-
-		int min 100;
-		int max = 5000;
-		int randomsiegeint = min + (rand() % (int)(max - min + 1));
-
-		string randomname = "TB";
-
-		stringstream ss;
-		ss << randomsiegeint;
-		string str = ss.str();
-
-		randomname.append(str);
-
-		//Check for conflicting base name
-		if (GetSpaceObject(CreateID(SpaceObject::CreateBaseNickname(randomname).c_str())))
-		{
-			PrintUserCmdText(client, L"ERR Deployment error, please reiterate.");
-			return true;
-		}
-
-		//@@TODO Admin log this being run
-
-		// Get the current position, rotation, and system of the player
-		uint system;
-		Vector pos;
-		Matrix rot;
-		string loadout = "null_loadout";
-
-		pub::SpaceObj::GetSystem(ship, system);
-		pub::SpaceObj::GetLocation(ship, pos, rot);
-
-		// Set the default archtype to a simple outpost
-
-		SpaceObject *obj = new SpaceObject(system, pos, rot, "wplatform_pbase_01", loadout, randomname);
-	}
-
+	return HandleAdminCommands(cmd, args);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +159,7 @@ bool ExecuteCommandString_Callback(CCmds* cmd, const wstring &args)
 EXPORT PLUGIN_INFO* Get_PluginInfo()
 {
 	PLUGIN_INFO* p_PI = new PLUGIN_INFO();
-	p_PI->sName = "Solar Controller by Conrad Weiser\Laz - Some code refactored from Alley/Cannon";
+	p_PI->sName = "Solar Controller by Remnant - Some code refactored from Alley/Cannon";
 	p_PI->sShortName = "solarcntl";
 	p_PI->bMayPause = true;
 	p_PI->bMayUnload = true;
@@ -228,6 +169,9 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
+	
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkCb_AddDmgEntry, PLUGIN_HkCb_AddDmgEntry, 0));
 
 	return p_PI;
 }
