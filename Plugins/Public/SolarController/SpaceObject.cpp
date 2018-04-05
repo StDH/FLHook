@@ -15,7 +15,8 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 	this->archetype = archetype;
 	this->maximumHealth = maximumHealth;
 	this->currentHealth = maximumHealth;
-	
+	this->basename = stows(nicknameReadable);
+
 	SpaceObject::SetupDefaults();
 
 	this->saveTimer = rand() % 60;
@@ -91,9 +92,11 @@ void SpaceObject::Spawn()
 		SpawnSolar(spaceobj, si);
 
 		// Set the health for the Space Object to be it's maximum by default
-		pub::SpaceObj::SetRelativeHealth(spaceobj, this->maximumHealth);
+		pub::SpaceObj::SetRelativeHealth(spaceobj, 1.0f);
 		if (debuggingMode)
 			ConPrint(L"SpaceObj::created space_obj=%u health=%f\n", spaceobj, this->maximumHealth);
+
+		SyncReputationForBaseObject(spaceobj);
 
 		pub::AI::SetPersonalityParams pers = MakePersonality();
 		pub::AI::SubmitState(spaceobj, &pers);
@@ -258,6 +261,24 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 				ConPrint(L"SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, spaceObject.first);
 
 			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
+		}
+	}
+}
+
+void SpaceObject::SyncReputationForBaseObject(uint space_obj)
+{
+	struct PlayerData *pd = 0;
+	while (pd = Players.traverse_active(pd))
+	{
+		if (pd->iShipID && pd->iSystemID == system)
+		{
+			int player_rep;
+			pub::SpaceObj::GetRep(pd->iShipID, player_rep);
+			float attitude = GetAttitudeTowardsClient(pd->iOnlineID);
+
+			int obj_rep;
+			pub::SpaceObj::GetRep(space_obj, obj_rep);
+			pub::Reputation::SetAttitude(obj_rep, player_rep, attitude);
 		}
 	}
 }

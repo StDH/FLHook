@@ -118,6 +118,8 @@ public:
 	// Applies a change of reputation between all bases in a clients system, to the clients ship
 	static void SyncReputationForClientShip(uint ship, uint client, uint affiliation);
 
+	void SyncReputationForBaseObject(uint space_obj);
+
 	// A function returning a pointer to the current object
 	static SpaceObject *GetSpaceobject(uint obj);
 

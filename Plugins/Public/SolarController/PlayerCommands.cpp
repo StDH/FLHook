@@ -109,7 +109,7 @@ bool AdminCommands::TestSpaceObj(uint client)
 	pub::SpaceObj::GetSystem(clientShip, shipSystem);
 
 	//@@TODO: Adjust the maximum health value to reflect the maximum help defined in the archetype used for the model
-	SpaceObject *newObj = new SpaceObject(shipSystem, shipPos, shipRot, "space_factory01", "null_loadout", randomname, 10000000);
+	SpaceObject *newObj = new SpaceObject(shipSystem, shipPos, shipRot, "dsy_playerbase_01", "null_loadout", randomname, 10000000);
 
 	// Set the affiliation to the admins
 	newObj->affiliation = CreateID("fc_admin");
