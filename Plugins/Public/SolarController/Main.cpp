@@ -124,6 +124,10 @@ void __stdcall HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage
 	//Delegate the function to it's correct object type
 	for(const auto& obj : spaceObjects)
 	{
+		if(debuggingMode == 2)
+		{
+			ConPrint(L"");
+		}
 		obj.second->HkCb_AddDmgEntry(dmg, p1, damage, fate);
 	}
 

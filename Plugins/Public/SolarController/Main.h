@@ -16,7 +16,7 @@
 using namespace std;
 
 // Are we in debugging mode for the plugin?
-static bool debuggingMode = true;
+static int debuggingMode = 2;
 
 static PLUGIN_RETURNCODE returncode;
 

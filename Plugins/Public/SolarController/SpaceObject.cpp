@@ -93,7 +93,7 @@ void SpaceObject::Spawn()
 
 		// Set the health for the Space Object to be it's maximum by default
 		pub::SpaceObj::SetRelativeHealth(spaceobj, 1.0f);
-		if (debuggingMode)
+		if (debuggingMode > 0)
 			ConPrint(L"SpaceObj::created space_obj=%u health=%f\n", spaceobj, this->maximumHealth);
 
 		SyncReputationForBaseObject(spaceobj);
@@ -257,7 +257,7 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 		if (spaceObject.second->system == system)
 		{
 			const float attitude = spaceObject.second->GetAttitudeTowardsClient(client);
-			if (debuggingMode)
+			if (debuggingMode > 0)
 				ConPrint(L"SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, spaceObject.first);
 
 			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
@@ -498,7 +498,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		pub::SpaceObj::GetHealth(iDmgToSpaceID, curr, max);
 
 		// Debugging stuff
-		if(debuggingMode)
+		if(debuggingMode == 2)
 		{
 			ConPrint(L"HkCb_AddDmgEntry iDmgToSpaceID=%u get_inflictor_id=%u curr=%0.2f max=%0.0f damage=%0.2f cause=%u is_player=%u player_id=%u fate=%u\n",
 				iDmgToSpaceID, dmg->get_inflictor_id(), curr, max, damage, dmg->get_cause(), dmg->is_inflictor_a_player(), dmg->get_inflictor_owner_player(), fate);
@@ -510,7 +510,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		if (damage == 0.0f && curr> 200000)
 		{
 			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-			if (debuggingMode)
+			if (debuggingMode == 2)
 				ConPrint(L"HkCb_AddDmgEntry[1] - invalid damage?\n");
 			return;
 		}
@@ -518,7 +518,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		// If this is an NPC hit then suppress the call completely
 		if (!dmg->is_inflictor_a_player())
 		{
-			if (debuggingMode)
+			if (debuggingMode == 2)
 				ConPrint(L"HkCb_AddDmgEntry[2] suppressed - npc\n");
 			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
 			iDmgToSpaceID = 0;
@@ -532,7 +532,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		if (newDamage != 0.0f)
 		{
 			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-			if (debuggingMode)
+			if (debuggingMode == 2)
 				ConPrint(L"HkCb_AddDmgEntry[3] suppressed - shield up - new_damage=%0.0f\n", newDamage);
 			dmg->add_damage_entry(p1, newDamage, fate);
 			iDmgToSpaceID = 0;
@@ -544,7 +544,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 // Handle the base being destroyed
 void SpaceObject::ObjectDestroyed(uint space_obj, uint client)
 {
-	if (debuggingMode)
+	if (debuggingMode > 0)
 		ConPrint(L"SpaceObject::destroyed space_obj=%u\n", space_obj);
 
 	pub::SpaceObj::LightFuse(space_obj, "player_base_explode_fuse", 0);
