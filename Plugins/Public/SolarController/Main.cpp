@@ -66,8 +66,8 @@ void LoadSettings()
 	char datapath[MAX_PATH];
 	GetUserDataPath(datapath);
 	string spawneddir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\)";
-	string spaceobjdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\objects\)";
-	string pobdir = string(datapath) + R"(\Accts\MultiPlayer\spawned_solars\playerbase\)";
+	string spaceobjdir = spawneddir + R"(objects\)";
+	string pobdir = spawneddir + R"(playerbase\)";
 
 	CreateDirectoryA(spawneddir.c_str(), nullptr);
 	CreateDirectoryA(spaceobjdir.c_str(), nullptr);
@@ -75,6 +75,23 @@ void LoadSettings()
 
 	ConPrint(L"Directories created\n");
 
+	string objPath = spaceobjdir + R"(object*.ini)";
+	string pobPath = pobdir + R"(base*.ini)";
+	ConPrint(L"%s\n", stows(objPath).c_str());
+	WIN32_FIND_DATA findfile;
+	HANDLE handle = FindFirstFile(objPath.c_str(), &findfile);
+	if (handle != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			string filepath = spawneddir + R"(objects\)" + findfile.cFileName;
+			ConPrint(L"%s\n", stows(filepath).c_str());
+			SpaceObject *base = new SpaceObject(filepath);
+			spaceObjects[base->base] = base;
+			base->Spawn();
+		} while (FindNextFile(handle, &findfile));
+		FindClose(handle);
+	}
 }
 
 
@@ -133,6 +150,21 @@ void __stdcall HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage
 
 }
 
+// Handle attempted dock requests 
+void __cdecl Dock_Call(unsigned int const &iShip, unsigned int const &base, int iCancel, enum DOCK_HOST_RESPONSE response)
+{
+	returncode = DEFAULT_RETURNCODE;
+
+	uint client = HkGetClientIDByShip(iShip);
+	SpaceObject* obj = GetSpaceObject(base);
+	ConPrint(L"%u\n", obj);
+	if(obj && (response == PROCEED_DOCK || response == DOCK))
+	{
+		pub::Player::SendNNMessage(client, pub::GetNicknameId("info_access_denied"));
+		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
+	}
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Client command processing
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -173,9 +205,10 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
-	
+
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkCb_AddDmgEntry, PLUGIN_HkCb_AddDmgEntry, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&Dock_Call, PLUGIN_HkCb_Dock_Call, 0));
 
 	return p_PI;
 }
