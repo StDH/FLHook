@@ -1,47 +1,6 @@
-#include <windows.h>
-#include <stdio.h>
-#include <string>
-#include <time.h>
-#include <math.h>
-#include <list>
-#include <map>
-#include <algorithm>
-#include <FLHook.h>
-#include <plugin.h>
-#include <PluginUtilities.h>
-#include "PlayerCommands.h"
+#include "CommandHandler.h"
 #include <sstream>
 #include "SpaceObject.h"
-
-
-
-bool HandlePlayerCommands(uint iClientID, const wstring& args)
-{
-	returncode = DEFAULT_RETURNCODE;
-	// Handle shit here
-	
-	return false;
-}
-
-bool HandleAdminCommands(CCmds* cmd, const wstring &args)
-{
-	returncode = DEFAULT_RETURNCODE;
-
-	const uint client = HkGetClientIdFromCharname(cmd->GetAdminName());
-
-	if(args.find(L"basehelp") == 0)
-	{
-		AdminCommands::AdminHelp(client);
-		return true;
-	}
-	else if(args.find(L"testobj") == 0)
-	{
-		return AdminCommands::TestSpaceObj(client);
-	}
-
-	return false;
-}
-
 
 void AdminCommands::AdminHelp(uint client)
 {
@@ -51,10 +10,10 @@ void AdminCommands::AdminHelp(uint client)
 
 bool AdminCommands::TestSpaceObj(uint client)
 {
-	
+
 	uint clientShip;
 	pub::Player::GetShip(client, clientShip);
-	if(!clientShip)
+	if (!clientShip)
 	{
 		PrintUserCmdText(client, L"ERR Not in space");
 		return true;
@@ -104,7 +63,7 @@ bool AdminCommands::TestSpaceObj(uint client)
 	// Offset the ShipPosition so the station doesn't appear directly on top of you
 	Rotate180(shipRot);
 	TranslateX(shipPos, shipRot, 1000);
-	
+
 	pub::SpaceObj::GetLocation(clientShip, shipPos, shipRot);
 	pub::SpaceObj::GetSystem(clientShip, shipSystem);
 
@@ -121,4 +80,3 @@ bool AdminCommands::TestSpaceObj(uint client)
 
 	return true;
 }
-

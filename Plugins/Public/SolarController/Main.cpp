@@ -26,7 +26,7 @@
 #include "SpaceObject.h"
 
 #include "../hookext_plugin/hookext_exports.h"
-#include "PlayerCommands.h"
+#include "CommandHandler.h"
 
 
 void LoadSettings();
