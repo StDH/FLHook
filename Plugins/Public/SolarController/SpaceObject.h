@@ -84,6 +84,9 @@ public:
 	// The save timer offset
 	int saveTimer{};
 
+	// The last known save time for the object - Defaults to the time the object was created
+	mstime lastSavedTime = timeInMS();
+
 	/* ///////////////////////////////////////////
 	* Function Prototypes
 	*////////////////////////////////////////////
@@ -99,8 +102,8 @@ public:
 	// Spawn the object with the given internal settings
 	virtual void Spawn();
 
-	// Some timer function
-	bool Timer(uint curr_time);
+	// Internal timer function containing each operation for the SpaceObj which needs handled automatically over a period of time
+	void Timer(mstime currTime);
 
 	// Load the object from its INI file
 	virtual void Load(const string &path);
@@ -109,7 +112,7 @@ public:
 	virtual void Save();
 
 	// Create the internal nickname hash for the base, given the english nickname
-	static string CreateObjectNickname(const string &basename);
+	static string CreateObjectNickname(const string & objname);
 
 	// Function which gets run every time damage has occured for the base
 	virtual float SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage);

@@ -132,9 +132,6 @@ EXPORT PLUGIN_RETURNCODE Get_PluginReturnCode()
 	return returncode;
 }
 
-bool bPluginEnabled = true;
-
-
 void LoadSettings()
 {
 
@@ -291,6 +288,15 @@ void __stdcall CharacterSelect(struct CHARACTER_ID const &cId, unsigned int clie
 	}
 }
 
+// Handle each base timer operation
+void HkTimerCheckKick()
+{
+	ConPrint(L"NonDelegated Timer\n");
+	for (auto &spaceObject : spaceObjects)
+	{
+		spaceObject.second->Timer(timeInMS());
+	}
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Client command processing
@@ -332,6 +338,7 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ClearClientInfo, PLUGIN_ClearClientInfo, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&UserCmd_Process, PLUGIN_UserCmd_Process, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&ExecuteCommandString_Callback, PLUGIN_ExecuteCommandString_Callback, 0));
+	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkTimerCheckKick, PLUGIN_HkTimerCheckKick, 0));
 
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkCb_AddDmgEntry, PLUGIN_HkCb_AddDmgEntry, 0));

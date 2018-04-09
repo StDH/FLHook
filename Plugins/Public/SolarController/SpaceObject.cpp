@@ -19,7 +19,8 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 
 	SpaceObject::SetupDefaults();
 
-	this->saveTimer = rand() % 60;
+	// A random number between 0 and 60 is chosen, which is then multiplied by 1000 so millisecond operations are scaled to seconds
+	this->saveTimer = (rand() % 60) * 1000;
 
 	spaceObjects[this->base] = this;
 }
@@ -100,6 +101,25 @@ void SpaceObject::Spawn()
 		pub::AI::SetPersonalityParams pers = MakePersonality();
 		pub::AI::SubmitState(this->spaceobj, &pers);
 
+	}
+}
+
+void SpaceObject::Timer(mstime currTime)
+{
+	ConPrint(L"Delegated timer\n");
+	// Since this is a simple SpaceObj, the only timer operation we need to do is handling autosaving
+	if(currTime > (this->lastSavedTime + this->saveTimer))
+	{
+		this->Save();
+		this->lastSavedTime = timeInMS();
+
+		// Save again 60 seconds later
+		this->saveTimer = (60 * 1000);
+
+		if(debuggingMode > 1)
+		{
+			ConPrint(L"SpaceObject:: (%s) running save operation", this->nickname);
+		}
 	}
 }
 
@@ -286,7 +306,7 @@ void SpaceObject::Save()
 		fprintf(file, "objsolar = %s\n", archetype.c_str());
 		fprintf(file, "objloadout = %s\n", loadout.c_str());
 		fprintf(file, "affiliation = %u\n", affiliation);
-		fprintf(file, "system = %i\n", system);
+		fprintf(file, "system = %u\n", system);
 		
 		fprintf(file, "pos = %0.0f, %0.0f, %0.0f\n", position.x, position.y, position.z);
 
