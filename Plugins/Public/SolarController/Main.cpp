@@ -35,7 +35,7 @@
 // Handle docking error messages
 bool __stdcall HkCb_IsDockableError(uint dock_with, uint base)
 {
-	if (SpaceObject::GetSpaceobject(base))
+	if (GetSpaceObject(base))
 		return false;
 	ConPrint(L"ERROR: Base not found dock_with=%08x base=%08x\n", base, base);
 	return true;
@@ -59,7 +59,6 @@ __declspec(naked) void HkCb_IsDockableErrorNaked()
 			ret
 	}
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Start up
@@ -96,6 +95,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 			WriteProcMem((char*)hModCommon + 0x995fc, patch, sizeof(patch));
 		}
 
+		HkLoadStringDLLs();
 		patched = true;
 
 	}
@@ -120,6 +120,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		}
 
 		HkUnloadStringDLLs();
+		patched = false;
 	}
 	return true;
 }
@@ -185,7 +186,6 @@ void LoadSettings()
 	ConPrint(L"SolarController: Number of SpaceObjects: %u\n", objectCount);
 	ConPrint(L"SolarController: Number of Bases: %u\n", baseCount);
 
-	HkLoadStringDLLs();
 }
 
 
@@ -282,7 +282,6 @@ void __stdcall RequestEvent(int iIsFormationRequest, unsigned int iShip, unsigne
 void __stdcall CharacterSelect(struct CHARACTER_ID const &cId, unsigned int client)
 {
 	returncode = DEFAULT_RETURNCODE;
-	ConPrint(L"Character Select Call");
 	// Loop over all space objects and set their names
 	for (auto& spaceObject : spaceObjects)
 	{

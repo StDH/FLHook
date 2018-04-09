@@ -59,3 +59,4 @@ namespace AdminCommands
 //Functions
 ////////////////////////////////////////////
 
+SpaceObject *GetSpaceObject(uint base);
