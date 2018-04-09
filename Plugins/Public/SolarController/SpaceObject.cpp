@@ -21,6 +21,7 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 
 	// A random number between 0 and 60 is chosen, which is then multiplied by 1000 so millisecond operations are scaled to seconds
 	this->saveTimer = (rand() % 60) * 1000;
+	this->lastSavedTime = timeInMS();
 
 	spaceObjects[this->base] = this;
 }
@@ -106,7 +107,6 @@ void SpaceObject::Spawn()
 
 void SpaceObject::Timer(mstime currTime)
 {
-	ConPrint(L"Delegated timer\n");
 	// Since this is a simple SpaceObj, the only timer operation we need to do is handling autosaving
 	if(currTime > (this->lastSavedTime + this->saveTimer))
 	{
@@ -160,7 +160,7 @@ void SpaceObject::SetupDefaults()
 
 		char tpath[1024];
 		sprintf(tpath, R"(%s\Accts\MultiPlayer\spawned_solars\objects\object_%08x.ini)", datapath, base);
-		path = tpath;
+		this->path = tpath;
 
 	}
 

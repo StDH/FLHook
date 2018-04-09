@@ -291,7 +291,6 @@ void __stdcall CharacterSelect(struct CHARACTER_ID const &cId, unsigned int clie
 // Handle each base timer operation
 void HkTimerCheckKick()
 {
-	ConPrint(L"NonDelegated Timer\n");
 	for (auto &spaceObject : spaceObjects)
 	{
 		spaceObject.second->Timer(timeInMS());
