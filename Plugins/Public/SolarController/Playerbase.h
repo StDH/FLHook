@@ -54,7 +54,7 @@ class Playerbase : public SpaceObject {
 	 * Function prototypes
 	 */
 	void Save() override;
-	void Load() override;
+	void Load(const string& path) override;
 	
 	void Spawn() override;
 

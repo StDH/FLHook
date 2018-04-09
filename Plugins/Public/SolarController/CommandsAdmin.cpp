@@ -80,3 +80,14 @@ bool AdminCommands::TestSpaceObj(uint client)
 
 	return true;
 }
+
+void AdminCommands::BaseDebug(uint iClientID)
+{
+	// Spit out basic information for each object present
+	for(const auto& spaceObj : spaceObjects)
+	{
+		PrintUserCmdText(iClientID, L"Base: %s | Type: %s | Archetype: %s | Loadout: %s | CurrHp: %f | MaxHp: %f",
+			spaceObj.second->basename, stows(SpaceObject::objEnumToStringRepresentation(spaceObj.second->objectType)), stows(spaceObj.second->archetype),
+			stows(spaceObj.second->loadout), spaceObj.second->currentHealth, spaceObj.second->maximumHealth);
+	}
+}

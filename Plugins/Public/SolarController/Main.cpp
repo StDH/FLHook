@@ -60,6 +60,7 @@ __declspec(naked) void HkCb_IsDockableErrorNaked()
 	}
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Start up
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +69,7 @@ void LoadSettings();
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	bool patched = false;
+	static bool patched = false;
 	srand((uint)time(nullptr));
 	// If we're being loaded from the command line while FLHook is running then
 	// set_scCfgFile will not be empty so load the settings as FLHook only
@@ -77,6 +78,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	{
 		if (set_scCfgFile.length()>0)
 			LoadSettings();
+
 		if(!patched)
 		{
 			hModCommon = GetModuleHandleA("common.dll");
@@ -87,11 +89,32 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 				PatchCallAddr((char*)hModCommon, 0x576cb, (char*)HkCb_IsDockableErrorNaked);
 			}
 		}
+		{
+			// Suppress GetArch() error on max hit points call
+			byte patch[] = { 0x90, 0x90 }; // nop nop
+			WriteProcMem((char*)hModCommon + 0x995b6, patch, sizeof(patch));
+			WriteProcMem((char*)hModCommon + 0x995fc, patch, sizeof(patch));
+		}
+
+		patched = true;
+
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH)
 	{
+		{
+			// Unpatch the landing hook
+			byte patch[] = { 0x8A, 0x43, 0x1C, 0x84, 0xC0 };
+			WriteProcMem((char*)hModServer + 0x2c24c, patch, sizeof(patch));
+		}
+		{
+			// Unpatch the Suppress "is dockable " error message
+			byte patch[] = { 0x85, 0x86, 0xb4, 0x01, 0x00 };
+			WriteProcMem((char*)hModCommon + 0x576cb, patch, sizeof(patch));
+		}
+
 		for (auto& spaceObject : spaceObjects)
 		{
+			//@@TODO - Is this the correct way to handle a detachment? Should the list have this entry removed too?
 			delete spaceObject.second;
 			ConPrint(L"SolarController: Deleted Object - %s", spaceObject.second->basename.c_str());
 		}
@@ -151,9 +174,9 @@ void LoadSettings()
 			if(debuggingMode > 0) // Output all object names to the console if we are in debugmode
 				ConPrint(L"%s\n", stows(filepath).c_str());
 
-			SpaceObject *base = new SpaceObject(filepath);
-			spaceObjects[base->base] = base;
-			base->Spawn();
+			SpaceObject *obj = new SpaceObject(filepath);
+			spaceObjects[obj->base] = obj;
+			obj->Spawn();
 			objectCount++;
 		} while (FindNextFile(handle, &findfile));
 		FindClose(handle);
@@ -229,7 +252,7 @@ void __cdecl Dock_Call(unsigned int const &iShip, unsigned int const &base, int 
 	uint client = HkGetClientIDByShip(iShip);
 	SpaceObject* obj = GetSpaceObject(base);
 	ConPrint(L"%u\n", obj);
-	if(obj && (response == PROCEED_DOCK || response == DOCK))
+	if((obj->objectType == SpaceObject::SpaceObjectType::SOLAR) && (response == PROCEED_DOCK || response == DOCK))
 	{
 		pub::Player::SendNNMessage(client, pub::GetNicknameId("info_access_denied"));
 		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
@@ -268,6 +291,7 @@ void __stdcall CharacterSelect(struct CHARACTER_ID const &cId, unsigned int clie
 		HkChangeIDSString(client, spaceObject.second->solar_ids, spaceObject.second->basename);
 	}
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Client command processing

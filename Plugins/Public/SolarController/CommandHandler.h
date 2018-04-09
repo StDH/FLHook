@@ -14,4 +14,5 @@ namespace AdminCommands
 {
 	void AdminHelp(uint client);
 	bool TestSpaceObj(uint client);
+	void BaseDebug(uint client);
 }

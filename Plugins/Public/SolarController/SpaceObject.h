@@ -15,6 +15,17 @@ public:
 		BASE
 	};
 
+	static string objEnumToStringRepresentation(SpaceObjectType type)
+	{
+		switch(type)
+		{
+		case SOLAR: return "SpaceObject";
+		case BASE: return "PlayerBase";
+		case JUMP: return "JumpObject";
+		}
+		return {};
+	}
+
 	/* ///////////////////////////////////////////
 	* Variables shared amongst all spawned object types
 	*////////////////////////////////////////////
@@ -23,7 +34,7 @@ public:
 	string nickname;
 
 	// The ingame hash of the base nickname
-	uint base;
+	uint base{};
 
 	// The name of the base shown to other players
 	wstring basename;
@@ -71,7 +82,7 @@ public:
 	uint spaceobj{};
 
 	// The save timer offset
-	int saveTimer;
+	int saveTimer{};
 
 	/* ///////////////////////////////////////////
 	* Function Prototypes
@@ -92,7 +103,7 @@ public:
 	bool Timer(uint curr_time);
 
 	// Load the object from its INI file
-	virtual void Load();
+	virtual void Load(const string &path);
 
 	// Save the object to its INI file
 	virtual void Save();
@@ -104,7 +115,7 @@ public:
 	virtual float SpaceObjDamaged(uint space_obj, uint attacking_space_obj, float curr_hitpoints, float damage);
 
 	// Function run when the spaceobj has been destroyed
-	virtual float SpaceObjDestroyed();
+	virtual void SpaceObjDestroyed();
 
 	// A setter for the default object settings
 	virtual void SetupDefaults();

@@ -5,7 +5,7 @@ void Playerbase::Save()
 	
 }
 
-void Playerbase::Load()
+void Playerbase::Load(const string& path)
 {
 	
 }

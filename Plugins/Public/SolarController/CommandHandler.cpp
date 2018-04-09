@@ -33,10 +33,14 @@ bool HandleAdminCommands(CCmds* cmd, const wstring &args)
 		AdminCommands::AdminHelp(client);
 		return true;
 	}
-
 	if(args.find(L"testobj") == 0)
 	{
 		return AdminCommands::TestSpaceObj(client);
+	}
+	if(args.find(L"basedebug") == 0)
+	{
+		AdminCommands::BaseDebug(client);
+		return true;
 	}
 
 	return false;

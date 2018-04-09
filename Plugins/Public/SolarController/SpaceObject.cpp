@@ -26,8 +26,7 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 
 SpaceObject::SpaceObject(const string& path)
 {
-	// Load the file using the path
-	
+	SpaceObject::Load(path);
 }
 
 void SpaceObject::Spawn()
@@ -44,12 +43,12 @@ void SpaceObject::Spawn()
 		char archname[100];
 
 		// Prepare the settings for the space object
-		_snprintf(archname, sizeof(archname), archetype.c_str());
+		_snprintf(archname, sizeof(archname), this->archetype.c_str());
 		si.iArchID = CreateID(archname);
-		si.iLoadoutID = CreateID(loadout.c_str());
+		si.iLoadoutID = CreateID(this->loadout.c_str());
 		si.iHitPointsLeft = 1;
-		si.iSystemID = system;
-		si.mOrientation = rotation;
+		si.iSystemID = this->system;
+		si.mOrientation = this->rotation;
 		si.vPos = position;
 		si.Costume.head = CreateID("pi_pirate2_head");
 		si.Costume.body = CreateID("pi_pirate8_body");
@@ -75,31 +74,31 @@ void SpaceObject::Spawn()
 		struct PlayerData *pd = 0;
 		while ((pd = Players.traverse_active(pd)))
 		{
-			HkChangeIDSString(pd->iOnlineID, this->solar_ids, basename);
+			HkChangeIDSString(pd->iOnlineID, this->solar_ids, this->basename);
 		}
 
 		// Set the base name
-		FmtStr infoname(solar_ids, nullptr);
+		FmtStr infoname(this->solar_ids, nullptr);
 		infoname.begin_mad_lib(solar_ids); // scanner name
 		infoname.end_mad_lib();
 
-		FmtStr infocard(solar_ids, nullptr);
+		FmtStr infocard(this->solar_ids, nullptr);
 		infocard.begin_mad_lib(solar_ids); // infocard
 		infocard.end_mad_lib();
 		pub::Reputation::Alloc(si.iRep, infoname, infocard);
 		
 		// Spawn the solar object
-		SpawnSolar(spaceobj, si);
+		SpawnSolar(this->spaceobj, si);
 
 		// Set the health for the Space Object to be it's maximum by default
-		pub::SpaceObj::SetRelativeHealth(spaceobj, 1.0f);
+		pub::SpaceObj::SetRelativeHealth(this->spaceobj, (this->currentHealth / this->maximumHealth));
 		if (debuggingMode > 0)
-			ConPrint(L"SpaceObj::created space_obj=%u health=%f\n", spaceobj, this->maximumHealth);
+			ConPrint(L"SpaceObj::created space_obj=%u health=%f\n", this->spaceobj, (this->currentHealth));
 
-		SyncReputationForBaseObject(spaceobj);
+		SyncReputationForBaseObject(this->spaceobj);
 
 		pub::AI::SetPersonalityParams pers = MakePersonality();
-		pub::AI::SubmitState(spaceobj, &pers);
+		pub::AI::SubmitState(this->spaceobj, &pers);
 
 	}
 }
@@ -122,7 +121,7 @@ void SpaceObject::DeleteObject()
 	if(!MoveFile(this->path.c_str(), fullpath.c_str()))
 	{
 		AddLog("ERROR: Base destruction MoveFile FAILED! Error code: %s",
-			boost::lexical_cast<std::string>(GetLastError()).c_str());
+		       std::to_string(GetLastError()).c_str());
 	}
 
 	spaceObjects.erase(this->base);
@@ -170,18 +169,108 @@ void SpaceObject::SetupDefaults()
 }
 
 
-void SpaceObject::Load()
+void SpaceObject::Load(const string& path)
 {
-	// Todo
+	INI_Reader ini;
+	if (ini.open(path.c_str(), false))
+	{
+		while (ini.read_header())
+		{
+			if (ini.is_header("SolarObj"))
+			{
+				while (ini.read_value())
+				{
+					// A value used to ensure that we place each infocardPara ini value into the correct array index
+					static int lastInfocardParaLoaded = 0;
+
+					if (ini.is_value("nickname"))
+					{
+						this->nickname = ini.get_value_string();
+					}
+					else if (ini.is_value("nickname_readable"))
+					{
+						this->basename = stows(ini.get_value_string());
+					}
+					else if (ini.is_value("objsolar"))
+					{
+						this->archetype = ini.get_value_string();
+					}
+					else if (ini.is_value("objloadout"))
+					{
+						this->loadout = ini.get_value_string();
+					}
+					else if (ini.is_value("affiliation"))
+					{
+						this->affiliation = ini.get_value_int(0);
+					}
+					else if (ini.is_value("system"))
+					{
+						this->system = ini.get_value_int(0);
+					}
+					else if (ini.is_value("pos"))
+					{
+						Vector objPos{};
+						objPos.x = ini.get_value_float(0);
+						objPos.y = ini.get_value_float(1);
+						objPos.z = ini.get_value_float(2);
+
+						this->position = objPos;
+					}
+					else if (ini.is_value("rot"))
+					{
+						Vector objRot{};
+						objRot.x = ini.get_value_float(0);
+						objRot.y = ini.get_value_float(1);
+						objRot.z = ini.get_value_float(2);
+
+						this->rotation = EulerMatrix(objRot);
+					}
+					else if (ini.is_value("infoname"))
+					{
+						this->infocard = stows(ini.get_value_string());
+					}
+					else if (ini.is_value("infocardpara"))
+					{
+						this->infocard_para[lastInfocardParaLoaded] = stows(ini.get_value_string());
+						lastInfocardParaLoaded++;
+					}
+					else if (ini.is_value("maxhealth"))
+					{
+						this->maximumHealth = ini.get_value_int(0);
+					}
+					else if (ini.is_value("currenthealth"))
+					{
+						this->currentHealth = ini.get_value_int(0);
+					}
+				}
+			}
+		}
+
+		// Set the object path to the one it was just loaded from
+		this->path = path;
+
+		// Create a random save timer value in milliseconds
+		this->saveTimer = (rand() % 60) * 1000;
+
+		// Hash the nickname to get the internal base id
+		this->base = CreateID(this->nickname.c_str());
+
+		if (debuggingMode >= 1)
+		{
+			ConPrint(L"SpaceObj::Loaded base: %s settings from file\n", stows(this->nickname));
+		}
+	}
+	ini.close();
 }
 
 void SpaceObject::Save()
 {
-	FILE *file = fopen(path.c_str(), "w");
+	const auto file = fopen(path.c_str(), "w");
 	if(file)
 	{
 		fprintf(file, "[SolarObj]\n");
 		fprintf(file, "nickname = %s\n", nickname.c_str());
+		fprintf(file, "nickname_readable = %s\n", wstos(basename).c_str());
 		fprintf(file, "objsolar = %s\n", archetype.c_str());
 		fprintf(file, "objloadout = %s\n", loadout.c_str());
 		fprintf(file, "affiliation = %u\n", affiliation);
@@ -201,6 +290,7 @@ void SpaceObject::Save()
 		fprintf(file, "maxhealth = %0.0f\n", maximumHealth);
 		fprintf(file, "currenthealth = %0.0f\n", currentHealth);
 	}
+	ConPrint(L"Write operation: Closing file\n");
 	fclose(file);
 }
 
@@ -222,9 +312,9 @@ float SpaceObject::SpaceObjDamaged(uint space_obj, uint attacking_space_obj, flo
 	return damage;
 }
 
-float SpaceObject::SpaceObjDestroyed()
+void SpaceObject::SpaceObjDestroyed()
 {
-	return 0.0f;
+	// Do something
 }
 
 float SpaceObject::GetAttitudeTowardsClient(uint client)
