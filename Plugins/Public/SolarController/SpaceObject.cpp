@@ -46,7 +46,7 @@ void SpaceObject::Spawn()
 		_snprintf(archname, sizeof(archname), this->archetype.c_str());
 		si.iArchID = CreateID(archname);
 		si.iLoadoutID = CreateID(this->loadout.c_str());
-		si.iHitPointsLeft = 1;
+		si.iHitPointsLeft = INT_MAX;
 		si.iSystemID = this->system;
 		si.mOrientation = this->rotation;
 		si.vPos = position;
@@ -254,6 +254,18 @@ void SpaceObject::Load(const string& path)
 
 		// Hash the nickname to get the internal base id
 		this->base = CreateID(this->nickname.c_str());
+
+		// Validate the affiliation and clear it if there is no infocard
+		// name assigned to it. We assume that this would be an corrupted affiliation.
+		if (affiliation)
+		{
+			uint name;
+			pub::Reputation::GetGroupName(affiliation, name);
+			if (!name)
+			{
+				affiliation = 0;
+			}
+		}
 
 		if (debuggingMode >= 1)
 		{
