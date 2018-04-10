@@ -66,6 +66,7 @@ __declspec(naked) void HkCb_IsDockableErrorNaked()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void LoadSettings();
+static bool settingsLoaded = false;
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
@@ -122,8 +123,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		patched = false;
 	}
 
-	if (set_scCfgFile.length()>0)
+	if (set_scCfgFile.length() > 0 && !settingsLoaded)
+	{
 		LoadSettings();
+		settingsLoaded = true;
+	}
 
 	return true;
 }
