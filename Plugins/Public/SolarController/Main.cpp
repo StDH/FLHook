@@ -27,6 +27,7 @@
 
 #include "../hookext_plugin/hookext_exports.h"
 #include "CommandHandler.h"
+#include <boost/filesystem.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //__declspec
@@ -114,10 +115,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
 		for (auto& spaceObject : spaceObjects)
 		{
-			//@@TODO - Is this the correct way to handle a detachment? Should the list have this entry removed too?
-			delete spaceObject.second;
-			ConPrint(L"SolarController: Deleted Object - %s", spaceObject.second->basename.c_str());
+			pub::SpaceObj::Destroy(spaceObject.second->spaceobj, DestroyType::VANISH); // Remove all Space Objects on unload
+			ConPrint(L"SolarController: Deleted Object - %s\n", spaceObject.second->basename.c_str());
 		}
+
+		spaceObjects.clear(); // Clear our list of objects
 
 		HkUnloadStringDLLs();
 		patched = false;
@@ -151,8 +153,8 @@ void LoadSettings()
 	int objectCount = 0;
 	int baseCount = 0;
 
-	string objPath = spaceobjdir + R"(object*.ini)"; // Path to the object files
-	string pobPath = pobdir + R"(base*.ini)"; // Path to the base files
+	string objPath = spaceobjdir + R"(object_*.ini)"; // Path to the object files
+	string pobPath = pobdir + R"(base_*.ini)"; // Path to the base files
 
 	if(debuggingMode > 0)
 	{
@@ -170,7 +172,7 @@ void LoadSettings()
 			string filepath = spawneddir + R"(objects\)" + findfile.cFileName;
 
 			if(debuggingMode > 0) // Output all object names to the console if we are in debugmode
-				ConPrint(L"%s\n", stows(filepath).c_str());
+				ConPrint(L"SolarController: %s\n", stows(filepath).c_str());
 
 			SpaceObject *obj = new SpaceObject(filepath);
 			spaceObjects[obj->base] = obj;
@@ -246,32 +248,11 @@ void __cdecl Dock_Call(unsigned int const &iShip, unsigned int const &base, int 
 {
 	returncode = DEFAULT_RETURNCODE;
 
-	uint client = HkGetClientIDByShip(iShip);
 	SpaceObject* obj = GetSpaceObject(base);
-	ConPrint(L"%u\n", obj);
-	if((obj->objectType == SpaceObject::SpaceObjectType::SOLAR) && (response == PROCEED_DOCK || response == DOCK))
+	for (auto& spaceObject : spaceObjects)
 	{
-		pub::Player::SendNNMessage(client, pub::GetNicknameId("info_access_denied"));
-		returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-	}
-}
-
-// Handle requests - called before Dock_Call
-void __stdcall RequestEvent(int iIsFormationRequest, unsigned int iShip, unsigned int iDockTarget, unsigned int p4, unsigned long p5, unsigned int client)
-{
-	returncode = DEFAULT_RETURNCODE;
-	if (client)
-	{
-		if (!iIsFormationRequest)
-		{
-			SpaceObject* obj = GetSpaceObject(iDockTarget);
-			if (obj) // If it is a space object
-			{
-				PrintUserCmdText(client, L"You cannot dock with an object.");
-				returncode = SKIPPLUGINS_NOFUNCTIONCALL;
-				return;
-			}
-		}
+		if (spaceObject.second == obj)
+			obj->DockCall(iShip, base, iCancel, response);
 	}
 }
 
@@ -341,7 +322,6 @@ EXPORT PLUGIN_INFO* Get_PluginInfo()
 
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&BaseDestroyed_Hook, PLUGIN_BaseDestroyed, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&HkCb_AddDmgEntry, PLUGIN_HkCb_AddDmgEntry, 0));
-	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&RequestEvent, PLUGIN_HkIServerImpl_RequestEvent, 0));
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&CharacterSelect, PLUGIN_HkIServerImpl_CharacterSelect, 0));
 
 	p_PI->lstHooks.push_back(PLUGIN_HOOKINFO((FARPROC*)&Dock_Call, PLUGIN_HkCb_Dock_Call, 10));

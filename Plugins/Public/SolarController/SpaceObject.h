@@ -147,4 +147,6 @@ public:
 	virtual void HkCb_AddDmgEntry(DamageList *dmg, unsigned short p1, float damage, enum DamageEntry::SubObjFate fate);
 
 	virtual void ObjectDestroyed(uint space_obj, uint client);
+
+	virtual void DockCall(uint ship, uint base, int iCancel, enum DOCK_HOST_RESPONSE response);
 };

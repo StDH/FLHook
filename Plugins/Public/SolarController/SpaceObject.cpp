@@ -95,7 +95,7 @@ void SpaceObject::Spawn()
 		// Set the health for the Space Object to be it's maximum by default
 		pub::SpaceObj::SetRelativeHealth(this->spaceobj, (this->currentHealth / this->maximumHealth));
 		if (debuggingMode > 0)
-			ConPrint(L"SpaceObj::created space_obj=%u health=%f\n", this->spaceobj, (this->currentHealth));
+			ConPrint(L"SolarController: SpaceObj::created space_obj=%u health=%f\n", this->spaceobj, (this->currentHealth));
 
 		SyncReputationForBaseObject(this->spaceobj);
 
@@ -116,9 +116,11 @@ void SpaceObject::Timer(mstime currTime)
 		// Save again 60 seconds later
 		this->saveTimer = (60 * 1000);
 
-		if(debuggingMode > 1)
+		if (debuggingMode > 1)
 		{
-			ConPrint(L"SpaceObject:: (%s) running save operation\n", stows(this->nickname));
+			{
+				ConPrint(L"SolarController: SpaceObject:: (%s) running save operation\n", stows(this->nickname));
+			}
 		}
 	}
 }
@@ -251,6 +253,7 @@ void SpaceObject::Load(const string& path)
 					}
 					else if (ini.is_value("infocardpara"))
 					{
+						if (stows(ini.get_value_string()).length() <= 0) continue; // Break if the string is empty
 						this->infocard_para[lastInfocardParaLoaded] = stows(ini.get_value_string());
 						lastInfocardParaLoaded++;
 					}
@@ -289,7 +292,7 @@ void SpaceObject::Load(const string& path)
 
 		if (debuggingMode >= 1)
 		{
-			ConPrint(L"SpaceObj::Loaded base: %s settings from file\n", stows(this->nickname));
+			ConPrint(L"SolarController: SpaceObj::Loaded base: %s settings from file\n", stows(this->nickname));
 		}
 	}
 	ini.close();
@@ -322,7 +325,7 @@ void SpaceObject::Save()
 		fprintf(file, "maxhealth = %0.0f\n", maximumHealth);
 		fprintf(file, "currenthealth = %0.0f\n", currentHealth);
 	}
-	ConPrint(L"Write operation: Closing file\n");
+	ConPrint(L"SolarController: Write operation: Closing file\n");
 	fclose(file);
 }
 
@@ -380,7 +383,7 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 		{
 			const float attitude = spaceObject.second->GetAttitudeTowardsClient(client);
 			if (debuggingMode > 0)
-				ConPrint(L"SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, spaceObject.first);
+				ConPrint(L"SolarController: SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, spaceObject.first);
 
 			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
 		}
@@ -622,7 +625,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		// Debugging stuff
 		if(debuggingMode == 2)
 		{
-			ConPrint(L"HkCb_AddDmgEntry iDmgToSpaceID=%u get_inflictor_id=%u curr=%0.2f max=%0.0f damage=%0.2f cause=%u is_player=%u player_id=%u fate=%u\n",
+			ConPrint(L"SolarController: HkCb_AddDmgEntry iDmgToSpaceID=%u get_inflictor_id=%u curr=%0.2f max=%0.0f damage=%0.2f cause=%u is_player=%u player_id=%u fate=%u\n",
 				iDmgToSpaceID, dmg->get_inflictor_id(), curr, max, damage, dmg->get_cause(), dmg->is_inflictor_a_player(), dmg->get_inflictor_owner_player(), fate);
 		}
 
@@ -633,7 +636,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		{
 			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
 			if (debuggingMode == 2)
-				ConPrint(L"HkCb_AddDmgEntry[1] - invalid damage?\n");
+				ConPrint(L"SolarController: HkCb_AddDmgEntry[1] - invalid damage?\n");
 			return;
 		}
 
@@ -641,7 +644,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 		if (!dmg->is_inflictor_a_player())
 		{
 			if (debuggingMode == 2)
-				ConPrint(L"HkCb_AddDmgEntry[2] suppressed - npc\n");
+				ConPrint(L"SolarController: HkCb_AddDmgEntry[2] suppressed - npc\n");
 			returncode = SKIPPLUGINS_NOFUNCTIONCALL;
 			iDmgToSpaceID = 0;
 			return;
@@ -667,7 +670,7 @@ void SpaceObject::HkCb_AddDmgEntry(DamageList* dmg, unsigned short p1, float dam
 void SpaceObject::ObjectDestroyed(uint space_obj, uint client)
 {
 	if (debuggingMode > 0)
-		ConPrint(L"SpaceObject::destroyed space_obj=%u\n", space_obj);
+		ConPrint(L"SolarController: SpaceObject::destroyed space_obj=%u\n", space_obj);
 
 	pub::SpaceObj::LightFuse(space_obj, "player_base_explode_fuse", 0);
 	spaceObjects.erase(space_obj);
@@ -678,4 +681,9 @@ void SpaceObject::ObjectDestroyed(uint space_obj, uint client)
 
 	SpaceObject::DeleteObject();
 
+}
+
+void SpaceObject::DockCall(uint ship, uint base, int iCancel, enum DOCK_HOST_RESPONSE response)
+{
+	returncode = SKIPPLUGINS_NOFUNCTIONCALL;
 }
