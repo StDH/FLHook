@@ -76,9 +76,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	// calls load settings on FLHook startup and .rehash.
 	if(fdwReason == DLL_PROCESS_ATTACH)
 	{
-		if (set_scCfgFile.length()>0)
-			LoadSettings();
-
 		if(!patched)
 		{
 			hModCommon = GetModuleHandleA("common.dll");
@@ -124,6 +121,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		HkUnloadStringDLLs();
 		patched = false;
 	}
+
+	if (set_scCfgFile.length()>0)
+		LoadSettings();
+
 	return true;
 }
 
