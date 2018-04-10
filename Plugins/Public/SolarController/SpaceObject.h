@@ -130,7 +130,7 @@ public:
 	static pub::AI::SetPersonalityParams MakePersonality();
 
 	// Applies a change of reputation between all bases in a clients system, to the clients ship
-	static void SyncReputationForClientShip(uint ship, uint client, uint affiliation);
+	void SyncReputationForClientShip(uint ship, uint client, uint affiliation) const;
 
 	void SyncReputationForBaseObject(uint space_obj);
 

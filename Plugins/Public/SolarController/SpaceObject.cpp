@@ -325,7 +325,6 @@ void SpaceObject::Save()
 		fprintf(file, "maxhealth = %0.0f\n", maximumHealth);
 		fprintf(file, "currenthealth = %0.0f\n", currentHealth);
 	}
-	ConPrint(L"SolarController: Write operation: Closing file\n");
 	fclose(file);
 }
 
@@ -341,6 +340,10 @@ float SpaceObject::SpaceObjDamaged(uint space_obj, uint attacking_space_obj, flo
 	if(client)
 	{
 		pub::Reputation::SetAttitude(attacking_space_obj, space_obj, -1.0f);
+		SyncReputationForBaseObject(this->spaceobj);
+
+		if (debuggingMode > 1)
+			ConPrint(L"SolarController: Syncing %u hostile to playerid %u", this->spaceobj, attacking_space_obj);
 	}
 
 	// Given that this function is for simple SpaceObjects, and is only used for rep purposes, we do not do any damage value manipulations.
@@ -369,7 +372,7 @@ float SpaceObject::GetAttitudeTowardsClient(uint client)
 	return attitude;
 }
 
-void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affiliation)
+void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affiliation) const
 {
 	int player_rep;
 	pub::SpaceObj::GetRep(ship, player_rep);
@@ -385,7 +388,11 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 			if (debuggingMode > 0)
 				ConPrint(L"SolarController: SyncReputationForClientShip:: ship=%u attitude=%f obj=%08x\n", ship, attitude, spaceObject.first);
 
-			pub::Reputation::SetAttitude(affiliation, player_rep, attitude);
+			// Get the reputation of the base
+			int objRep;
+			pub::SpaceObj::GetRep(this->spaceobj, objRep);
+
+			pub::Reputation::SetAttitude(objRep, player_rep, attitude);
 		}
 	}
 }
@@ -393,13 +400,13 @@ void SpaceObject::SyncReputationForClientShip(uint ship, uint client, uint affil
 void SpaceObject::SyncReputationForBaseObject(uint space_obj)
 {
 	struct PlayerData *pd = 0;
-	while (pd = Players.traverse_active(pd))
+	while ((pd = Players.traverse_active(pd)))
 	{
 		if (pd->iShipID && pd->iSystemID == system)
 		{
 			int player_rep;
 			pub::SpaceObj::GetRep(pd->iShipID, player_rep);
-			float attitude = GetAttitudeTowardsClient(pd->iOnlineID);
+			const float attitude = GetAttitudeTowardsClient(pd->iOnlineID);
 
 			int obj_rep;
 			pub::SpaceObj::GetRep(space_obj, obj_rep);

@@ -269,7 +269,7 @@ void __stdcall CharacterSelect(struct CHARACTER_ID const &cId, unsigned int clie
 	for (auto& spaceObject : spaceObjects)
 	{
 		if (debuggingMode > 1)
-			ConPrint(L"SolarController: Changing Base IDSString: %u to %s", spaceObject.second->solar_ids, spaceObject.second->basename.c_str());
+			ConPrint(L"SolarController: Changing Base IDSString: %u to %s\n", spaceObject.second->solar_ids, spaceObject.second->basename.c_str());
 		HkChangeIDSString(client, spaceObject.second->solar_ids, spaceObject.second->basename);
 	}
 }
