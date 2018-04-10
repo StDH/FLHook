@@ -76,6 +76,8 @@ bool AdminCommands::TestSpaceObj(uint client)
 	newObj->Spawn();
 	newObj->Save();
 
+	spaceObjects[newObj->base] = newObj;
+
 	PrintUserCmdText(client, L"OK: Test SpaceObject created");
 
 	return true;

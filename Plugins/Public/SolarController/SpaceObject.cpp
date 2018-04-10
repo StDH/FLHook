@@ -118,7 +118,7 @@ void SpaceObject::Timer(mstime currTime)
 
 		if(debuggingMode > 1)
 		{
-			ConPrint(L"SpaceObject:: (%s) running save operation", this->nickname);
+			ConPrint(L"SpaceObject:: (%s) running save operation\n", stows(this->nickname));
 		}
 	}
 }
