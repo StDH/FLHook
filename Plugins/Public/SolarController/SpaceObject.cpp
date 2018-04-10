@@ -22,8 +22,6 @@ SpaceObject::SpaceObject(const uint system, const Vector pos, const Matrix rot, 
 	// A random number between 0 and 60 is chosen, which is then multiplied by 1000 so millisecond operations are scaled to seconds
 	this->saveTimer = (rand() % 60) * 1000;
 	this->lastSavedTime = timeInMS();
-
-	spaceObjects[this->base] = this;
 }
 
 SpaceObject::SpaceObject(const string& path)
@@ -97,6 +95,9 @@ void SpaceObject::Spawn()
 		if (debuggingMode > 0)
 			ConPrint(L"SolarController: SpaceObj::created space_obj=%u health=%f\n", this->spaceobj, (this->currentHealth));
 
+		// Add the object to the SpaceObjects list
+		spaceObjects[spaceobj] = this;
+
 		SyncReputationForBaseObject(this->spaceobj);
 
 		pub::AI::SetPersonalityParams pers = MakePersonality();
@@ -116,7 +117,7 @@ void SpaceObject::Timer(mstime currTime)
 		// Save again 60 seconds later
 		this->saveTimer = (60 * 1000);
 
-		if (debuggingMode > 1)
+		if (debuggingMode >= 1)
 		{
 			{
 				ConPrint(L"SolarController: SpaceObject:: (%s) running save operation\n", stows(this->nickname));

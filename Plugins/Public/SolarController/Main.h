@@ -25,6 +25,7 @@ class SpaceObject;
 ////////////////////////////////////////////
 //A list of each existing type of object
 ////////////////////////////////////////////
+// List containing every spawned object, of every type of the format <spaceobjID, SpaceObject[derived-class-compatible]*> 
 static map<uint, SpaceObject*> spaceObjects;
 
 ////////////////////////////////////////////
